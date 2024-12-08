@@ -10,183 +10,151 @@ import (
 	"github.com/spaceandtimelabs/SxT-Go-SDK/helpers"
 )
 
-// List available namespaces in the blockchain
-func ListSchemas(scope, searchPattern string) (schemas string, errMsg string, status bool) {
-	tokenEndPoint := helpers.GetDiscoverEndpoint("schema") + "?scope=" + scope
-
+// ListSchemas lists available namespaces in the blockchain based on scope and optional search pattern.
+func ListSchemas(scope, searchPattern string) (string, string, bool) {
+	endpoint := helpers.GetDiscoverEndpoint("schema") + "?scope=" + scope
 	if searchPattern != "" {
-		tokenEndPoint += "&searchPattern=" + searchPattern
+		endpoint += "&searchPattern=" + searchPattern
 	}
-
-	return executeRequest(tokenEndPoint)
+	return executeRequest(endpoint)
 }
 
-/*
-List tables in a given schema
-Possible scope values -  ALL = all resources, PUBLIC = non-permissioned tables, PRIVATE = tables created by the requesting user
-*/
-func ListTables(schema, scope, searchPattern string) (tables string, errMsg string, status bool) {
-	re, r := helpers.CheckUpperCase(schema)
-	if !r {
-		return "", re, r
+// ListTables lists tables in a given schema.
+func ListTables(schema, scope, searchPattern string) (string, string, bool) {
+	if errMsg, valid := helpers.CheckUpperCase(schema); !valid {
+		return "", errMsg, false
 	}
 
-	tableEndpoint := helpers.GetDiscoverEndpoint("table")
-	tokenEndPoint := fmt.Sprintf("%s?scope=%s", tableEndpoint, scope)
+	endpoint := fmt.Sprintf("%s?scope=%s", helpers.GetDiscoverEndpoint("table"), scope)
 	if schema != "" {
-		tokenEndPoint += "&schema=" + schema
+		endpoint += "&schema=" + schema
 	}
-
 	if searchPattern != "" {
-		tokenEndPoint += "&searchPattern=" + searchPattern
+		endpoint += "&searchPattern=" + searchPattern
 	}
-
-	return executeRequest(tokenEndPoint)
+	return executeRequest(endpoint)
 }
 
-// List columns in a given schema and a table
-func ListColumns(schema, table string) (columns string, errMsg string, status bool) {
+// ListColumns lists columns in a given schema and table.
+func ListColumns(schema, table string) (string, string, bool) {
 	return listTableInfo("column", schema, table)
 }
 
-// List table index in a given schema and a table
-func ListTableIndex(schema, table string) (indexes string, errMsg string, status bool) {
+// ListTableIndex lists table indexes in a given schema and table.
+func ListTableIndex(schema, table string) (string, string, bool) {
 	return listTableInfo("index", schema, table)
 }
 
-// List table primary keys in a given schema and a table
-func ListTablePrimaryKey(schema, table string) (primaryKeys string, errMsg string, status bool) {
+// ListTablePrimaryKey lists primary keys in a given schema and table.
+func ListTablePrimaryKey(schema, table string) (string, string, bool) {
 	return listTableInfo("primarykey", schema, table)
 }
 
-// List table primary keys in a given schema and a table
-func listTableInfo(infoType, schema, table string) (info string, errMsg string, status bool) {
-	queryParameters := []string{schema, table}
-
-	for _, field := range queryParameters {
-		message, isUpperCase := helpers.CheckUpperCase(field)
-		if !isUpperCase {
-			return "", message, isUpperCase
-		}
+// ListTableRelations lists table relationships based on schema and scope.
+func ListTableRelations(schema, scope string) (string, string, bool) {
+	if errMsg, valid := helpers.CheckUpperCase(schema); !valid {
+		return "", errMsg, false
 	}
-
-	tableEndpoint := helpers.GetDiscoverEndpoint("table")
-	tokenEndPoint := fmt.Sprintf("%s/%s?schema=%s&table=%s", tableEndpoint, infoType, schema, table)
-
-	return executeRequest(tokenEndPoint)
-
+	endpoint := fmt.Sprintf("%s/relations?schema=%s&scope=%s", helpers.GetDiscoverEndpoint("table"), schema, scope)
+	return executeRequest(endpoint)
 }
 
-// List table relationships in a given schema and a table
-// Scope can be PRIVATE, PUBLIC, ALL
-func ListTableRelations(schema, scope string) (relations string, errMsg string, status bool) {
-	re, r := helpers.CheckUpperCase(schema)
-	if !r {
-		return "", re, r
-	}
-
-	tableEndpoint := helpers.GetDiscoverEndpoint("table")
-	tokenEndPoint := fmt.Sprintf("%s/relations?schema=%s&scope=%s", tableEndpoint, schema, scope)
-
-	return executeRequest(tokenEndPoint)
-}
-
-// List primary key references in a given schema and a table and a column
-func ListPrimaryKeyReferences(schema, table, column string) (primaryKeyReferences string, errMsg string, status bool) {
+// ListPrimaryKeyReferences lists primary key references for a schema, table, and column.
+func ListPrimaryKeyReferences(schema, table, column string) (string, string, bool) {
 	return listKeyReferences("primary", schema, table, column)
 }
 
-// List foreign key references in a given schema and a table and a column
-func ListForeignKeyReferences(schema, table, column string) (foreignKeyReferences string, errMsg string, status bool) {
+// ListForeignKeyReferences lists foreign key references for a schema, table, and column.
+func ListForeignKeyReferences(schema, table, column string) (string, string, bool) {
 	return listKeyReferences("foreign", schema, table, column)
 }
 
-func listKeyReferences(keyReferenceType, schema, table, column string) (keyReferences string, errMsg string, status bool) {
-	queryParameters := []string{schema, table, column}
-
-	for _, field := range queryParameters {
-		message, isUpperCase := helpers.CheckUpperCase(field)
-		if !isUpperCase {
-			return "", message, isUpperCase
-		}
-	}
-
-	referenceKeyEndpoint := helpers.GetDiscoverEndpoint("refs")
-	tokenEndPoint := fmt.Sprintf("%s/%skey?schema=%s&table=%s&column=%s", referenceKeyEndpoint, keyReferenceType, schema, table, column)
-	return executeRequest(tokenEndPoint)
-}
-
-// List Blockchains
-func ListBlockchains() (blockchains string, errMsg string, status bool) {
+// ListBlockchains lists all blockchains.
+func ListBlockchains() (string, string, bool) {
 	return listBlockchainInfo("", "")
 }
 
-// List Blockchains
-func ListBlockchainSchemas(chainId string) (blockchainSchema string, errMsg string, status bool) {
-	return listBlockchainInfo(chainId, "schemas")
+// ListBlockchainSchemas lists schemas for a specific blockchain.
+func ListBlockchainSchemas(chainID string) (string, string, bool) {
+	return listBlockchainInfo(chainID, "schemas")
 }
 
-// List Blockchain Information
-func ListBlockchainInformation(chainId string) (blockchainInformation string, errMsg string, status bool) {
-	return listBlockchainInfo(chainId, "meta")
+// ListBlockchainInformation provides metadata for a specific blockchain.
+func ListBlockchainInformation(chainID string) (string, string, bool) {
+	return listBlockchainInfo(chainID, "meta")
 }
 
-func listBlockchainInfo(chainId, infoType string) (blockchainInformation string, errMsg string, status bool) {
-	discoverBlockchainsEndpoint := helpers.GetDiscoverEndpoint("blockchains")
-
-	if chainId == "" {
-		return executeRequest(discoverBlockchainsEndpoint)
-	}
-
-	segments := []string{discoverBlockchainsEndpoint, chainId, infoType}
-	tokenEndPoint := strings.Join(segments, "/")
-
-	return executeRequest(tokenEndPoint)
-}
-
-// List views
-// owned values can be a "", 'true', 'false'. All string not boolean
-// Both parameters are optional
-func ListViews(name, owned string) (views string, errMsg string, status bool) {
-	tokenEndPoint := helpers.GetDiscoverEndpoint("views") + "?"
-	entryExists := false
+// ListViews lists views based on optional name and ownership parameters.
+func ListViews(name, owned string) (string, string, bool) {
+	var endpointBuilder strings.Builder
+	endpointBuilder.WriteString(helpers.GetDiscoverEndpoint("views") + "?")
 
 	if name != "" {
-		tokenEndPoint += "name=" + name
-		entryExists = true
-	}
-
-	if owned != "" {
-		if entryExists {
-			tokenEndPoint += "&"
+		endpointBuilder.WriteString("name=" + name)
+		if owned != "" {
+			endpointBuilder.WriteString("&")
 		}
-		tokenEndPoint += "owned=" + owned
 	}
-
-	return executeRequest(tokenEndPoint)
+	if owned != "" {
+		endpointBuilder.WriteString("owned=" + owned)
+	}
+	return executeRequest(endpointBuilder.String())
 }
 
-// Master function
-func executeRequest(endpoint string) (output string, errMsg string, status bool) {
-	client := http.Client{}
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		return "", err.Error(), false
+// Helper functions
+func listTableInfo(infoType, schema, table string) (string, string, bool) {
+	if errMsg, valid := helpers.CheckUpperCase(schema); !valid {
+		return "", errMsg, false
+	}
+	if errMsg, valid := helpers.CheckUpperCase(table); !valid {
+		return "", errMsg, false
 	}
 
-	bearerToken := fmt.Sprintf("Bearer %s", os.Getenv("accessToken"))
-	req.Header.Add("Authorization", bearerToken)
+	endpoint := fmt.Sprintf("%s/%s?schema=%s&table=%s", helpers.GetDiscoverEndpoint("table"), infoType, schema, table)
+	return executeRequest(endpoint)
+}
+
+func listKeyReferences(keyType, schema, table, column string) (string, string, bool) {
+	for _, field := range []string{schema, table, column} {
+		if errMsg, valid := helpers.CheckUpperCase(field); !valid {
+			return "", errMsg, false
+		}
+	}
+
+	endpoint := fmt.Sprintf("%s/%skey?schema=%s&table=%s&column=%s", helpers.GetDiscoverEndpoint("refs"), keyType, schema, table, column)
+	return executeRequest(endpoint)
+}
+
+func listBlockchainInfo(chainID, infoType string) (string, string, bool) {
+	endpoint := helpers.GetDiscoverEndpoint("blockchains")
+	if chainID != "" {
+		endpoint = fmt.Sprintf("%s/%s/%s", endpoint, chainID, infoType)
+	}
+	return executeRequest(endpoint)
+}
+
+func executeRequest(endpoint string) (string, string, bool) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return "", fmt.Sprintf("Failed to create request: %v", err), false
+	}
+
+	accessToken := os.Getenv("accessToken")
+	if accessToken == "" {
+		return "", "Access token is not set", false
+	}
+	req.Header.Add("Authorization", "Bearer "+accessToken)
 
 	res, err := client.Do(req)
 	if err != nil {
-		return "", err.Error(), false
+		return "", fmt.Sprintf("Request failed: %v", err), false
 	}
-
 	defer res.Body.Close()
+
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return "", err.Error(), false
+		return "", fmt.Sprintf("Failed to read response body: %v", err), false
 	}
-
 	return string(body), "", true
 }
