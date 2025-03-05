@@ -61,7 +61,7 @@ func GenerateKeys(authCode string, pubkey ed25519.PublicKey, privkey ed25519.Pri
 	} else {
 		encodedSignature = hex.EncodeToString(signature)
 
-		base64PublicKey = b64.StdEncoding.EncodeToString([]byte(pubkey))
+		base64PublicKey = b64.StdEncoding.EncodeToString(pubkey)
 	}
 
 	return encodedSignature, base64PublicKey
